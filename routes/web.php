@@ -18,9 +18,9 @@ Route::get('/', function () {
 });
 
 Route::prefix('/info') -> group (function(){
-    Route::get('/server', [InfoController::class, 'serverInfo']);
+    Route::get('/server', [InfoController::class, 'serverInfo']); //Возвращает данные об установленной версии PHP;
 
-    Route::get('/client', [InfoController::class, 'clientInfo']);
+    Route::get('/client', [InfoController::class, 'clientInfo']); //Возвращает данные о перешедшем по роуту клиенте
 
-    Route::get('/database', [InfoController::class, 'databaseInfo']);
+    Route::get('/database', [InfoController::class, 'databaseInfo']); //Возвращает данные об используемой базе данных
 });
