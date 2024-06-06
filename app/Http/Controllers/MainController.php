@@ -20,7 +20,7 @@ use App\DTO\UserDTO;
 
 class MainController extends Controller
 {
-    public function login(LoginRequest $request)
+    public function login(LoginRequest $request) 
     {
         $userdata = $request->createDTO();
 
@@ -30,7 +30,7 @@ class MainController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $userTokenCount = $user->tokens()->count();
+        $userTokenCount = $user->tokens()->count(); 
         while ($userTokenCount >= env('MAX_ACTIVE_TOKENS', 3)) {
             $oldestToken = $user->tokens()->get();
             $oldestToken = $oldestToken->filter(function ($token) {
@@ -55,7 +55,7 @@ class MainController extends Controller
     }
 
 
-    public function out(Request $request)
+    public function out(Request $request) 
     {
         $user = Auth::user();
         $user->token()->revoke();
