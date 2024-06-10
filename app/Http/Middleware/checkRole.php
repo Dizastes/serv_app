@@ -17,7 +17,8 @@ class checkRole
 {
     public function handle(Request $request, Closure $next, ...$permission): Response
     {
-        
+        //проверка наличия нужного permission
+        //Смотреть только наивысшую роль пользователя
         if (!Auth::user()) {
             return response()->json(['error' => "You need login"], 403);
         }
@@ -26,12 +27,10 @@ class checkRole
             return Role::find($id)->permissions()->pluck('name');
         });
         $userPermissions =  $userPermissions->flatten()->toArray();
-        if (array_intersect($permission, $userPermissions)) 
-        {
+        if (array_intersect($permission, $userPermissions)) {
             return $next($request);
-        } 
-        else 
-        {
+        } else {
             return response()->json(['error' => "You need one of these permissions -> " . implode(', ', $permission)], 403);
+        }
     }
 }

@@ -20,7 +20,7 @@ use App\DTO\UserDTO;
 
 class MainController extends Controller
 {
-    public function login(LoginRequest $request) 
+    public function login(LoginRequest $request)
     {
         $userdata = $request->createDTO();
 
@@ -30,17 +30,14 @@ class MainController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $userTokenCount = $user->tokens()->count(); 
+        $userTokenCount = $user->tokens()->where('revoked', false)->where('expires_at', '>', Carbon::now())->count();;
+        if (env('MAX_ACTIVE_TOKENS', 3) <= 0) {
+            return response()->json(['message' => 'change env MAX_ACTIVE_TOKENS'], 401);
+        }
         while ($userTokenCount >= env('MAX_ACTIVE_TOKENS', 3)) {
             $oldestToken = $user->tokens()->get();
-            $oldestToken = $oldestToken->filter(function ($token) {
-                return $token->revoked == false;
-            });
             $oldestToken->sortBy('created_at')->first()->revoke();
-            $userTokenCount = $user->tokens()->where('revoked', false)->count();
-        }
-        if (env('MAX_ACTIVE_TOKENS') == 0) {
-            return response()->json(['message' => 'change env MAX_ACTIVE_TOKENS'], 401);
+            $userTokenCount--;
         }
         $tokenResult = $user->createToken('Personal Access Token');
         $token = $tokenResult->token;
@@ -55,7 +52,7 @@ class MainController extends Controller
     }
 
 
-    public function out(Request $request) 
+    public function out(Request $request)
     {
         $user = Auth::user();
         $user->token()->revoke();
@@ -91,19 +88,30 @@ class MainController extends Controller
     {
         $userData = $request->createDTO();
 
-        $user = User::create([
-            'username' => $userData->username,
-            'email' => $userData->email,
-            'password' => bcrypt($userData->password),
-            'birthday' => $userData->birthday,
-        ]);
+        DB::beginTransaction();
 
-        UsersAndRoles::create([
-            'user_id' => $user->id,
-            'role_id' => 3,
-            'created_by' => 1,
-        ]);
+        try {
+            $user = User::create([
+                'username' => $userData->username,
+                'email' => $userData->email,
+                'password' => bcrypt($userData->password),
+                'birthday' => $userData->birthday,
+            ]);
 
-        return response()->json($user, 201);
+            $role = UsersAndRoles::create([
+                'user_id' => $user->id,
+                'role_id' => 3,
+                'created_by' => 1,
+            ]);
+            $Log = new LogsController();
+            $Log->createLogs('User', "register", $user->id, 'null', $user, $user->id);
+            DB::commit();
+
+            return response()->json($user, Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            throw $e;
+        }
     }
 }

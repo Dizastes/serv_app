@@ -52,12 +52,27 @@ class UserController extends Controller
 			return response()->json(['error' => 'The user already has such a role']);
 		}
 
-		UsersAndRoles::create([
-			'user_id' => $user_id,
-			'role_id' => $role_id,
-			'created_by' => $request->user()->id,
-		]);
-		return response()->json(['status' => '200']);
+		DB::beginTransaction();
+
+		try {
+			$userPrevRoles = UsersAndRoles::where('user_id', $user_id)->get();
+			$usersAndRoles = UsersAndRoles::create([
+				'user_id' => $user_id,
+				'role_id' => $role_id,
+				'created_by' => $request->user()->id,
+			]);
+			$userAfterRoles = UsersAndRoles::where('user_id', $user_id)->get();
+			$Log = new LogsController();
+			$Log->createLogs('usersAndRoles', 'giveUserRole', $usersAndRoles->id, 'null', $usersAndRoles, $request->user()->id);
+
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
 	public function hardDeleteUserRole(ChangeUserAndRoleRequest $request)
@@ -65,11 +80,25 @@ class UserController extends Controller
 		$user_id = $request->id;
 		$role_id = $request->role_id;
 
-		$userAndRoles = UsersAndRoles::withTrashed()->where('user_id', $user_id)->where('role_id', $role_id);
+		DB::beginTransaction();
 
-		$userAndRoles->forcedelete();
+		try {
+			$userAndRoles = UsersAndRoles::withTrashed()->where('user_id', $user_id)->where('role_id', $role_id);
 
-		return response()->json(['status' => '200']);
+			$userAndRoles = $userAndRoles->first();
+			$Log = new LogsController();
+			$Log->createLogs('usersAndRoles', 'hardDeleteUserRole', $userAndRoles->id, $userAndRoles, 'null', Auth::id());
+
+			$userAndRoles->forcedelete();
+
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
 	public function softDeleteUserRole(ChangeUserAndRoleRequest $request)
@@ -78,13 +107,29 @@ class UserController extends Controller
 		$user_id = $request->id;
 		$role_id = $request->role_id;
 
-		$userAndRoles = UsersAndRoles::where('user_id', $user_id)->where('role_id', $role_id)->first();
+		DB::beginTransaction();
 
-		$userAndRoles->deleted_by = $request->user()->id;
-		$userAndRoles->delete();
-		$userAndRoles->save();
+		try {
+			$userAndRoles = UsersAndRoles::where('user_id', $user_id)->where('role_id', $role_id)->first();
+			if ($userAndRoles == null) {
+				return response()->json(['error' => 'The user does not have such a role']);
+			}
 
-		return response()->json(['status' => '200']);
+			$Log = new LogsController();
+			$Log->createLogs('usersAndRoles', 'softDeleteUserRole', $userAndRoles->id, $userAndRoles, 'null', $request->user()->id);
+
+			$userAndRoles->deleted_by = $request->user()->id;
+			$userAndRoles->delete();
+			$userAndRoles->save();
+
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
 	public function restoreDeletedUserRole(ChangeUserAndRoleRequest $request)
@@ -92,54 +137,135 @@ class UserController extends Controller
 		$user_id = $request->id;
 		$role_id = $request->role_id;
 
-		$userAndRoles = UsersAndRoles::withTrashed()->where('user_id', $user_id)->where('role_id', $role_id)->first();
+		DB::beginTransaction();
 
-		$userAndRoles->restore();
-		$userAndRoles->deleted_by = null;
-		$userAndRoles->save();
+		try {
+			$userAndRoles = UsersAndRoles::withTrashed()->where('user_id', $user_id)->where('role_id', $role_id)->first();
 
-		return response()->json(['status' => '200']);
+			$userAndRoles->restore();
+
+			$Log = new LogsController();
+			$Log->createLogs('usersAndRoles', 'restoreDeletedUserRole', $userAndRoles->id, 'null', $userAndRoles, $request->user()->id);
+
+			$userAndRoles->deleted_by = null;
+			$userAndRoles->save();
+
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
 	public function hardDeleteUser(Request $request)
 	{
 		$user_id = $request->id;
-		UsersAndRoles::where('user_id', $user_id)->forceDelete();
-
-		$user = User::find($user_id);
-		if ($user) {
+		DB::beginTransaction();
+		try {
+			$user = User::find($user_id);
+			if (!$user) {
+				return response()->json(['status' => '404', 'message' => 'User not found'], 404);
+			}
+			$usersAndRoles = UsersAndRoles::where('user_id', $user_id)->get();
+			$Log = new LogsController();
+			$Log->createLogs('user', 'hardDeleteUser', $user->id, $user, 'null', Auth::id());
+			$usersAndRoles->each(function ($usersAndRoles) {
+				$usersAndRoles->forcedelete();
+			});
 			$user->forceDelete();
-		} else {
-			return response()->json(['status' => '404', 'message' => 'User not found'], 404);
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
 		}
-		return response()->json(['status' => '200']);
 	}
 
 	public function softDeleteUser(Request $request)
 	{
 		$user_id = $request->id;
-		UsersAndRoles::where('user_id', $user_id)->delete();
-		User::find($user_id)->delete();
-		return response()->json(['status' => '200']);
+		DB::beginTransaction();
+		try {
+			$user = User::find($user_id);
+			if (!$user) {
+				return response()->json(['status' => '404', 'message' => 'User not found'], 404);
+			}
+			$usersAndRoles = UsersAndRoles::where('user_id', $user_id)->get();
+			$Log = new LogsController();
+			$Log->createLogs('user', 'softDeleteUser', $user->id, $user, 'null', Auth::id());
+			$usersAndRoles->each(function ($usersAndRoles) {
+				$usersAndRoles->deleted_by = Auth::id();
+				$usersAndRoles->delete();
+				$usersAndRoles->save();
+			});
+			$user->delete();
+			$user->save();
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
 	public function restoreDeletedUser(Request $request)
 	{
 		$user_id = $request->id;
-		UsersAndRoles::withTrashed()->where('user_id', $user_id)->restore();
-		User::withTrashed()->find($user_id)->restore();
-		return response()->json(['status' => '200']);
+
+		DB::beginTransaction();
+
+		try {
+			$userAndRoles = UsersAndRoles::withTrashed()->where('user_id', $user_id)->get();
+
+			$userAndRoles->each(function ($userAndRoles) {
+				$userAndRoles->restore();
+				$userAndRoles->deleted_by = null;
+				$userAndRoles->save();
+			});
+
+			$user = User::withTrashed()->find($user_id);
+			$user->restore();
+			$Log = new LogsController();
+			$Log->createLogs('user', 'restoreDeletedUser', $user->id, 'null', $user, Auth::id());
+			$user->save();
+
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
-	public function changeUserData(Request $request)
+	public function changeUserRole(Request $request)
 	{
-		$user = UsersAndRoles::where('user_id', $request->id)->first();
 		$role = $request->role; //int значение
+		DB::beginTransaction();
 
-		$user->update([
-			'role_id' => $role,
-		]);
-		return response()->json(['status' => '200']);
+		try {
+			$user = UsersAndRoles::where('user_id', $request->id)->first();
+			$userPrev = clone $user;
+			$user->update([
+				'role_id' => $role,
+			]);
+			$user->save();
+			$Log = new LogsController();
+			$Log->createLogs('usersAndRoles', 'UpdateUserRole', $user->id, $userPrev, $user, Auth::id());
+			DB::commit();
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+			throw $e;
+		}
 	}
 
 	public function updateInformation(UpdateInfoRequest $request)
@@ -149,31 +275,42 @@ class UserController extends Controller
 		$new_birthday = $request->new_birthday;
 		$new_username = $request->new_username;
 
-		$user = User::find(Auth::id());
-		if (!$user || !Hash::check($request->old_pass, $user->password)) {
-			return response()->json(['message' => 'Old password is incorrect'], 401);
+		DB::beginTransaction();
+		try {
+			$user = User::find(Auth::id());
+			$userPrev = clone $user;
+			if (!$user || !Hash::check($request->old_pass, $user->password)) {
+				return response()->json(['message' => 'Old password is incorrect'], 401);
+			}
+			if ($new_pass != '') {
+				$user->update([
+					'password' => $new_pass,
+				]);
+				$user->token()->revoke();
+			}
+			if ($new_email != '') {
+				$user->update([
+					'email' => $new_email,
+				]);
+			}
+			if ($new_birthday != '') {
+				$user->update([
+					'birthday' => $new_birthday,
+				]);
+			}
+			if ($new_username != '') {
+				$user->update([
+					'username' => $new_username,
+				]);
+			}
+			$user->save();
+			$Log = new LogsController();
+			$Log->createLogs('user', 'updateInformation', $user->id, $userPrev, $user, Auth::id());
+			DB::commit();
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+			throw $e;
 		}
-		if ($new_pass != '') {
-			$user->update([
-				'password' => $new_pass,
-			]);
-			$user->token()->revoke();
-		}
-		if ($new_email != '') {
-			$user->update([
-				'email' => $new_email,
-			]);
-		}
-		if ($new_birthday != '') {
-			$user->update([
-				'birthday' => $new_birthday,
-			]);
-		}
-		if ($new_username != '') {
-			$user->update([
-				'username' => $new_username,
-			]);
-		}
-		return response()->json(['status' => '200']);
 	}
 }

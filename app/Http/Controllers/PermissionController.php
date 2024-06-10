@@ -27,14 +27,27 @@ class PermissionController extends Controller
 
 		$user = $request->user();
 
-		$new_permission = Permission::create([
-			'name' => $request->input('name'),
-			'description' => $request->input('description'),
-			'code' => $request->input('code'),
-			'created_by' => $user->id,
-		]);
+		DB::beginTransaction();
 
-		return response()->json($new_permission);
+		try {
+			$new_permission = Permission::create([
+				'name' => $request->input('name'),
+				'description' => $request->input('description'),
+				'code' => $request->input('code'),
+				'created_by' => $user->id,
+			]);
+
+			$Log = new LogsController();
+			$Log->createLogs('permissions', __FUNCTION__, $new_permission->id, 'null', $new_permission, $user->id);
+
+			DB::commit();
+
+			return response()->json($new_permission);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
 	public function updatePermission(ChangePermissionRequest $request)
@@ -42,15 +55,29 @@ class PermissionController extends Controller
 
 		$user = $request->user();
 
-		$permission = Permission::where('id', $request->id)->first();
+		DB::beginTransaction();
 
-		$permission->update([
-			'name' => $request->input('name'),
-			'description' => $request->input('description'),
-			'code' => $request->input('code'),
-		]);
+		try {
+			$permission = Permission::where('id', $request->id)->first();
+			$permissionPrev = clone $permission;
+			$Log = new LogsController();
 
-		return response()->json($permission);
+			$permission->update([
+				'name' => $request->input('name'),
+				'description' => $request->input('description'),
+				'code' => $request->input('code'),
+			]);
+
+			$Log->createLogs('permissions', __FUNCTION__, $permission->id, $permissionPrev, $permission, $user->id);
+
+			DB::commit();
+
+			return response()->json($permission);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
 	public function hardDeletePermission(ChangePermissionRequest $request)
@@ -58,11 +85,24 @@ class PermissionController extends Controller
 
 		$permission_id = $request->id;
 
-		$permission = Permission::withTrashed()->find($permission_id);
+		DB::beginTransaction();
 
-		$permission->forcedelete();
+		try {
+			$permission = Permission::withTrashed()->find($permission_id);
 
-		return response()->json(['status' => '200']);
+			$Log = new LogsController();
+			$Log->createLogs('permissions', __FUNCTION__, $permission->id, $permission, 'null', $request->user()->id);
+
+			$permission->forcedelete();
+
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
 	public function softDeletePermission(ChangePermissionRequest $request)
@@ -71,13 +111,27 @@ class PermissionController extends Controller
 		$permission_id = $request->id;
 		$user = $request->user();
 
-		$permission = Permission::where('id', $permission_id)->first();
+		DB::beginTransaction();
 
-		$permission->deleted_by = $user->id;
-		$permission->delete();
-		$permission->save();
+		try {
+			$permission = Permission::where('id', $permission_id)->first();
 
-		return response()->json(['status' => '200']);
+			$permission->deleted_by = $user->id;
+
+			$Log = new LogsController();
+			$Log->createLogs('permissions', __FUNCTION__, $permission->id, $permission, 'null', $user->id);
+
+			$permission->delete();
+			$permission->save();
+
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 
 	public function restoreDeletedPermission(ChangePermissionRequest $request)
@@ -85,12 +139,25 @@ class PermissionController extends Controller
 
 		$permission_id = $request->id;
 
-		$permission = Permission::withTrashed()->find($permission_id);
+		DB::beginTransaction();
 
-		$permission->restore();
-		$permission->deleted_by = null;
-		$permission->save();
+		try {
+			$permission = Permission::withTrashed()->find($permission_id);
 
-		return response()->json(['status' => '200']);
+			$Log = new LogsController();
+			$Log->createLogs('permissions', __FUNCTION__, $permission->id, 'null', $permission, $request->user()->id);
+
+			$permission->restore();
+			$permission->deleted_by = null;
+			$permission->save();
+
+			DB::commit();
+
+			return response()->json(['status' => '200']);
+		} catch (\Exception $e) {
+			DB::rollBack();
+
+			throw $e;
+		}
 	}
 }
