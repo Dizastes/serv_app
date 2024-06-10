@@ -27,13 +27,6 @@ class LogsController extends Controller
         ]);
     }
 
-    public function getUserLogs(Request $request)
-    {
-        $id = $request->id;
-        $Logs = ChangeLogs::where('created_by', $id)->get();
-        return $Logs;
-    }
-
     public function getLogs(Request $request)
     {
         $id = $request->id;
@@ -43,8 +36,8 @@ class LogsController extends Controller
             case 'user':
                 $Logs = ChangeLogs::where('created_by', $id)->get();
                 break;
-            case 'Roles':
-                $Logs = ChangeLogs::where('table_name', $model)->where('row_id', $id)->get();
+            case 'role':
+                $Logs = ChangeLogs::where('table_name', "Roles")->where('row_id', $id)->get();
                 break;
             case 'permission':
                 $Logs = ChangeLogs::where('table_name', "Permissions")->where('row_id', $id)->get();
@@ -56,57 +49,7 @@ class LogsController extends Controller
 
         return $Logs;
     }
-    public function getRoleLogs(Request $request)
-    {
-        $id = $request->id;
-        $LogsRole = ChangeLogs::where('table_name', 'Roles')->where('row_id', $id)->get();
-
-        $temp1 = ChangeLogs::where('table_name', 'UsersAndRoles')->get();
-        $LogsUsersAndRoles = [];
-        foreach ($temp1 as $log) {
-            $t = UsersAndRoles::where('id', $log->row_id)->first();
-            try {
-                if ($t->role_id == $id) {
-                    array_push($LogsUsersAndRoles, $log);
-                }
-            } catch (\Exception $e) {
-                continue;
-            }
-        }
-        $temp2 = ChangeLogs::where('table_name', 'RolesAndPermission')->get();
-        $LogsRolesAndPermissions = [];
-        foreach ($temp2 as $log) {
-            $t = RolesAndPermissions::where('id', $log->row_id)->first();
-            try {
-                if ($t->role_id == $id) {
-                    array_push($LogsRolesAndPermissions, $log);
-                }
-            } catch (\Exception $e) {
-                continue;
-            }
-        }
-
-        $Logs = $LogsRole->concat($LogsUsersAndRoles)->concat($LogsRolesAndPermissions);
-        return $Logs;
-    }
-
-    public function getPermissionLogs(Request $request)
-    {
-        $id = $request->id;
-        $LogsRole = ChangeLogs::where('table_name', 'permissions')->where('row_id', $id)->get();
-        $temp = ChangeLogs::where('table_name', 'rolesAndPermissions')->get();
-        $LogsRolesAndPermissions = [];
-        foreach ($temp as $log) {
-            $t = RolesAndPermissions::where('id', $log->row_id)->first();
-            if ($t->permission_id == $id) {
-                array_push($LogsRolesAndPermissions, $log);
-            }
-        }
-
-        $Logs = $LogsRole->concat($LogsRolesAndPermissions);
-        return $Logs;
-    }
-
+   
     public function restoreRow(Request $request)
     {
         $log_id = $request->id;
