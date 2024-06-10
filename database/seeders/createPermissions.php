@@ -18,7 +18,6 @@ class createPermissions extends Seeder
             ['name' => 'delete-user', 'description' => 'can delete user', 'code' => 'delete-user', 'created_by' => '1'],
             ['name' => 'restore-user', 'description' => 'can restore user', 'code' => 'restore-user', 'created_by' => '1'],
 
-
             ['name' => 'get-list-role', 'description' => 'can get list of roles', 'code' => 'get-list-role', 'created_by' => '1'],
             ['name' => 'read-role', 'description' => 'can read role', 'code' => 'read-role', 'created_by' => '1'],
             ['name' => 'create-role', 'description' => 'can create role', 'code' => 'create-role', 'created_by' => '1'],

@@ -44,14 +44,16 @@ Route::prefix('ref')->group(function () {
         Route::post('role/{id}/restore', [RoleController::class, 'restoreDeletedRole'])->middleware('checkRole:restore-role');
 
 
-
-        Route::get('permission', [PermissionController::class, 'getPermissions'])->middleware('checkRole:get-list-permission');
-        Route::get('permission/{id}', [PermissionController::class, 'getTargetPermission'])->middleware('checkRole:read-permission');
-        Route::post('permission', [PermissionController::class, 'createPermission'])->middleware('checkRole:create-permission');
-        Route::put('permission/{id}', [PermissionController::class, 'updatePermission'])->middleware('checkRole:update-permission');
-        Route::delete('permission/{id}/hard', [PermissionController::class, 'hardDeletePermission'])->middleware('checkRole:delete-permission');
-        Route::delete('permission/{id}/soft', [PermissionController::class, 'softDeletePermission'])->middleware('checkRole:delete-permission');
-        Route::post('permission/{id}/restore', [PermissionController::class, 'restoreDeletedPermission'])->middleware('checkRole:restore-permission');
+		Route::prefix('permission')->group(function () {
+			Route::get('/', [PermissionController::class, 'getPermissions'])->middleware('checkRole:get-list-permission');
+			Route::get('{id}', [PermissionController::class, 'getTargetPermission'])->middleware('checkRole:read-permission');
+			Route::post('/',[PermissionController::class, 'createPermission'])->middleware('checkRole:create-permission');
+			Route::put('{id}', [PermissionController::class, 'updatePermission'])->middleware('checkRole:update-permission');
+			Route::delete('{id}/hard', [PermissionController::class, 'hardDeletePermission'])->middleware('checkRole:delete-permission');
+			Route::delete('{id}/soft', [PermissionController::class, 'softDeletePermission'])->middleware('checkRole:delete-permission');
+			Route::post('{id}/restore', [PermissionController::class, 'restoreDeletedPermission'])->middleware('checkRole:restore-permission');
+		});
+        
 
 
 

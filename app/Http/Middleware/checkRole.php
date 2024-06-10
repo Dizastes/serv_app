@@ -33,5 +33,6 @@ class checkRole
         else 
         {
             return response()->json(['error' => "You need one of these permissions -> " . implode(', ', $permission)], 403);
+        }
     }
 }
