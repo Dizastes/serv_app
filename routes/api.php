@@ -20,8 +20,10 @@ use App\Http\Controllers\LogsController;
 |
 */
 
-Route::prefix('ref')->group(function () {
-	Route::prefix('user')->group(function () {
+Route::prefix('ref')->group(function () 
+{
+	Route::prefix('user')->group(function () 
+	{
 		Route::get('/', [UserController::class, 'getUsers'])->middleware('checkRole:get-list-user');
 		Route::delete('{id}/hard', [UserController::class, 'hardDeleteUser'])->middleware('checkRole:delete-user');
 		Route::delete('{id}/soft', [UserController::class, 'softDeleteUser'])->middleware('checkRole:delete-user');
@@ -35,8 +37,10 @@ Route::prefix('ref')->group(function () {
 		Route::put('updateInformation', [UserController::class, 'updateInformation'])->middleware('checkRole:read-user');
 	});
 
-	Route::prefix('policy')->group(function () {
-		Route::prefix('role')->group(function () {
+	Route::prefix('policy')->group(function () 
+	{
+		Route::prefix('role')->group(function () 
+		{
 			Route::get('/', [RoleController::class, 'getRoles'])->middleware('checkRole:get-list-role');
 			Route::get('{id}', [RoleController::class, 'getTargetRole'])->middleware('checkRole:read-role');
 			Route::post('/', [RoleController::class, 'createRole'])->middleware('checkRole:create-role');
@@ -46,7 +50,8 @@ Route::prefix('ref')->group(function () {
 			Route::post('{id}/restore', [RoleController::class, 'restoreDeletedRole'])->middleware('checkRole:restore-role');
 		});
 
-		Route::prefix('role')->group(function () {
+		Route::prefix('role')->group(function () 
+		{
 			Route::get('/', [PermissionController::class, 'getPermissions'])->middleware('checkRole:get-list-permission');
 			Route::get('{id}', [PermissionController::class, 'getTargetPermission'])->middleware('checkRole:read-permission');
 			Route::post('/', [PermissionController::class, 'createPermission'])->middleware('checkRole:create-permission');
@@ -56,7 +61,8 @@ Route::prefix('ref')->group(function () {
 			Route::post('{id}/restore', [PermissionController::class, 'restoreDeletedPermission'])->middleware('checkRole:restore-permission');
 		});
 
-		Route::prefix('role/{id}/permission')->group(function () {
+		Route::prefix('role/{id}/permission')->group(function () 
+		{
 			Route::get('/', [RoleAndPermissionController::class, 'getRolePermission'])->middleware('checkRole:read-role');
 			Route::get('{permission_id}', [RoleAndPermissionController::class, 'addRolePermission'])->middleware('checkRole:update-role');
 			Route::delete('{permission_id}/hard', [RoleAndPermissionController::class, 'hardDeleteRolePermission'])->middleware('checkRole:update-role');
@@ -65,7 +71,8 @@ Route::prefix('ref')->group(function () {
 		});
 	});
 
-	Route::prefix('log')->group(function () {
+	Route::prefix('log')->group(function () 
+	{
 		Route::get('{model}/{id}/story', [LogsController::class, 'getLogs'])->middleware('checkRole:get-logs-user,delete-user');
 		Route::get('{id}/restore', [LogsController::class, 'restoreRow']);
 	});
@@ -73,13 +80,15 @@ Route::prefix('ref')->group(function () {
 
 
 
-Route::prefix('auth')->group(function () {
+Route::prefix('auth')->group(function () 
+{
 
 	Route::post('login', [MainController::class, "login"])->name('login');
 
 	Route::post('register', [MainController::class, "register"])->middleware('check');
 
-	Route::middleware('auth:api')->group(function () {
+	Route::middleware('auth:api')->group(function () 
+	{
 
 		Route::get('me', [MainController::class, "me"])->name('me');
 
