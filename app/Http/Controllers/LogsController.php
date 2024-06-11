@@ -37,7 +37,7 @@ class LogsController extends Controller
                 $Logs = ChangeLogs::where('created_by', $id)->get();
                 break;
             case 'role':
-                $Logs = ChangeLogs::where('table_name', "Roles")->where('row_id', $id)->get();
+                $Logs = ChangeLogs::where('table_name', 'Roles')->where('row_id', $id)->get();
                 break;
             case 'permission':
                 $Logs = ChangeLogs::where('table_name', "Permissions")->where('row_id', $id)->get();
@@ -49,7 +49,9 @@ class LogsController extends Controller
 
         return $Logs;
     }
-   
+
+
+
     public function restoreRow(Request $request)
     {
         $log_id = $request->id;

@@ -89,4 +89,7 @@ Route::prefix('auth')->group(function () {
 
 		Route::get('tokens', [MainController::class, "getTokens"]);
 	});
+
+	Route::post('refreshCode', [MainController::class, "refreshCode"]);
+	Route::post('verify', [MainController::class, "verifyCode"]);
 });
