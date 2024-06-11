@@ -24,26 +24,32 @@ class MainController extends Controller
 
         $user = User::where('username', $userdata->username)->first();
 
-        if (!$user || !Hash::check($userdata->password, $user->password)) {
+        if (!$user || !Hash::check($userdata->password, $user->password)) 
+        {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
         $userAndCode = UserAndCode::where('user_id', $user->id)->first();
-        if ($userAndCode && $userAndCode->refreshCode >= env("MAX_CODE_COUNT", 3)) {
+        if ($userAndCode && $userAndCode->refreshCode >= env("MAX_CODE_COUNT", 3)) 
+        {
             $now = Carbon::now();
             $oldestCode = UserAndCode::where('user_id', $user->id)->oldest()->first();
-            if ($now->diffInSeconds($oldestCode->updated_at) <= 30) {
+            if ($now->diffInSeconds($oldestCode->updated_at) <= 30) 
+            {
                 return response()->json(['message' => 'You need to wait ' . 30 - $now->diffInSeconds($oldestCode->updated_at) . ' seconds'], 401);
             }
         }
 
         $code = rand(100000, 999999);
-        if ($userAndCode) {
+        if ($userAndCode) 
+        {
             $userAndCode->refreshCode >= 3 ? $userAndCode->refreshCode : $userAndCode->refreshCode += 1;
             $userAndCode->time_to_expire = Carbon::now()->addMinutes(env('MAX_CODE_TIME', 10));
             $userAndCode->code = $code;
             $userAndCode->save();
-        } else {
+        } 
+        else 
+        {
             UserAndCode::create([
                 'user_id' => $user->id,
                 'code' => $code,
@@ -52,7 +58,8 @@ class MainController extends Controller
             ]);
         }
 
-        Mail::raw("Используйте данный код чтобы войти: $code", function ($message) use ($user) {
+        Mail::raw("Используйте данный код чтобы войти: $code", function ($message) use ($user) 
+        {
             $message->to($user->email)
                 ->subject('Ваш код доступа');
         });
@@ -70,7 +77,8 @@ class MainController extends Controller
     {
         $user = Auth::user();
 
-        $user->tokens->each(function ($token, $key) {
+        $user->tokens->each(function ($token, $key) 
+        {
             $token->revoke();
         });
         return response()->json(["All tokens is logout"], 200);
@@ -97,7 +105,8 @@ class MainController extends Controller
 
         DB::beginTransaction();
 
-        try {
+        try 
+        {
             $user = User::create([
                 'username' => $userData->username,
                 'email' => $userData->email,
@@ -115,7 +124,9 @@ class MainController extends Controller
             DB::commit();
 
             return response()->json($user, Response::HTTP_CREATED);
-        } catch (\Exception $e) {
+        } 
+        catch (\Exception $e) 
+        {
             DB::rollBack();
 
             throw $e;
@@ -127,11 +138,13 @@ class MainController extends Controller
         $username = $request->username;
         $code = $request->code;
         $user = User::where('username', $username)->first();
-        if (!$user) {
+        if (!$user) 
+        {
             return response()->json(['message' => 'User not found'], 401);
         }
         $userCode = UserAndCode::where('user_id', $user->id)->first();
-        if (!$userCode) {
+        if (!$userCode) 
+        {
             return response()->json(['message' => 'You need to login and request first code'], 401);
         }
         
@@ -139,10 +152,12 @@ class MainController extends Controller
         if ($code == $userCode->code && Carbon::now() <= $userCode->time_to_expire) 
         {
             $userTokenCount = $user->tokens()->where('revoked', false)->where('expires_at', '>', Carbon::now())->count();
-            if (env('MAX_ACTIVE_TOKENS') <= 0) {
+            if (env('MAX_ACTIVE_TOKENS') <= 0) 
+            {
                 return response()->json(['message' => 'change env MAX_ACTIVE_TOKENS'], 401);
             }
-            while ($userTokenCount >= env('MAX_ACTIVE_TOKENS', 3)) {
+            while ($userTokenCount >= env('MAX_ACTIVE_TOKENS', 3)) 
+            {
                 $oldestToken = $user->tokens()->get();
                 $oldestToken->sortBy('created_at')->first()->revoke();
                 $userTokenCount--;
@@ -154,8 +169,6 @@ class MainController extends Controller
             $userCode->delete();
             return response()->json([
                 'access_token' => $tokenResult->accessToken,
-                'token_type' => 'Bearer',
-                'expires_at' => Carbon::parse($tokenResult->token->expires_at)->toDateTimeString(),
             ]);
         } 
         else 
@@ -168,15 +181,19 @@ class MainController extends Controller
     {
         $username = $request->username;
         $user = User::where('username', $username)->first();
-        if (!$user) {
+        if (!$user) 
+        {
             return response()->json(['message' => 'User not found'], 401);
         }
         $userCode = UserAndCode::where('user_id', $user->id)->first();
-        if ($userCode) {
-            if ($userCode->refreshCode >= env("MAX_CODE_COUNT", 3)) {
+        if ($userCode) 
+        {
+            if ($userCode->refreshCode >= env("MAX_CODE_COUNT", 3)) 
+            {
                 $now = Carbon::now();
                 $oldestCode = UserAndCode::where('user_id', $user->id)->oldest()->first();
-                if ($now->diffInSeconds($oldestCode->updated_at) <= env("REFRESH_CODE_LIMIT", 30)) {
+                if ($now->diffInSeconds($oldestCode->updated_at) <= env("REFRESH_CODE_LIMIT", 30)) 
+                {
                     return response()->json(['message' => 'You need to wait ' . 30 - $now->diffInSeconds($oldestCode->updated_at) . ' seconds'], 401);
                 }
             }
@@ -184,12 +201,15 @@ class MainController extends Controller
             $userCode->time_to_expire = Carbon::now()->addMinutes(env('MAX_CODE_TIME', 10));
             $userCode->code = rand(100000, 999999);
             $userCode->save();
-            Mail::raw("Вы пытаетесь аторизироваться на нашем сайте: $userCode->code", function ($message) use ($user) {
+            Mail::raw("Вы пытаетесь аторизироваться на нашем сайте: $userCode->code", function ($message) use ($user) 
+            {
                 $message->to($user->email)
                     ->subject('Ваш код доступа');
             });
             return response()->json(['message' => 'Code send'], 200);
-        } else {
+        } 
+        else 
+        {
             return response()->json(['message' => 'You need to login and request first code'], 401);
         }
     }

@@ -32,7 +32,8 @@ class LogsController extends Controller
         $id = $request->id;
         $model = $request->model;
         $Logs = null;
-        switch ($model) {
+        switch ($model) 
+        {
             case 'user':
                 $Logs = ChangeLogs::where('created_by', $id)->get();
                 break;
@@ -46,7 +47,6 @@ class LogsController extends Controller
                 $Logs = response()->json(['error' => 'Not Found'], 404);
                 break;
         }
-
         return $Logs;
     }
 
@@ -59,7 +59,8 @@ class LogsController extends Controller
 
         DB::beginTransaction();
 
-        try {
+        try 
+        {
             $log = ChangeLogs::where('id', $log_id)->first();
 
             $table = $log->table_name;
@@ -69,16 +70,21 @@ class LogsController extends Controller
             if ($prev_value == 'null') {
                 DB::table($table)->where('id', $log->row_id)->delete();
                 $this->createLogs($table, __FUNCTION__, $log->row_id, $curent_value, 'null', $user->id);
-            } else if ($curent_value == "null") {
+            } 
+            else if ($curent_value == "null") 
+            {
                 $dataArray = json_decode($prev_value, true);
                 $dataArray['created_at'] = Carbon::parse($dataArray['created_at'])->format('Y-m-d H:i:s');
                 $dataArray['updated_at'] = Carbon::parse($dataArray['updated_at'])->format('Y-m-d H:i:s');
-                if (DB::table($table)->where('id', $dataArray['id'])->exists()) {
+                if (DB::table($table)->where('id', $dataArray['id'])->exists())
+                {
                     DB::table($table)->where('id', $dataArray['id'])->delete();
                 }
                 DB::table($table)->insert($dataArray);
                 $this->createLogs($table, __FUNCTION__, $log->row_id, 'null', $curent_value, $user->id);
-            } else {
+            } 
+            else 
+            {
                 $dataArray = json_decode($prev_value, true);
                 $dataArray['created_at'] = Carbon::parse($dataArray['created_at'])->format('Y-m-d H:i:s');
                 $dataArray['updated_at'] = Carbon::parse($dataArray['updated_at'])->format('Y-m-d H:i:s');
@@ -89,9 +95,10 @@ class LogsController extends Controller
             DB::commit();
 
             return response()->json(['status' => '200']);
-        } catch (\Exception $e) {
+        } 
+        catch (\Exception $e) 
+        {
             DB::rollBack();
-
             throw $e;
         }
     }
